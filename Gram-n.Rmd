@@ -1,0 +1,198 @@
+---
+title: "Gram_n"
+author: "Oscar Chamberlain"
+date: "22 de novembro de 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tm)
+library(dplyr)
+library(qdap)
+library(qdapDictionaries)
+library(tidytext)
+library(tidyr)
+library(stringr)
+
+
+
+ txt<-"C:/Users/ocham/Documents/Data/final/en_US"
+# txt<-"C:/Users/ocham/Documents/Data/final/en_US1"
+ (entxt <- VCorpus(DirSource(txt, encoding = "UTF-8"), readerControl = list(language = "en")))
+writeCorpus(entxt, path = ".") 
+
+entxt_ini<-entxt
+
+saveRDS(entxt_ini, "entxt_ini.RDS")
+rm(entxt_ini)
+
+# Choose randomly 40%
+b<-length(entxt[[1]]$content) # 899288
+
+set.seed(1234)
+b<-rbinom(b,1,0.7)
+entxt[[1]]$content<-entxt[[1]]$content[b==1]
+ 
+n<-length(entxt[[2]]$content) # 77259
+ 
+n<-rbinom(n,1,0.7)
+entxt[[2]]$content<-entxt[[2]]$content[n==1]
+ 
+ 
+t<-length(entxt[[3]]$content) #  2360148
+ 
+t<-rbinom(t,1,0.7)
+entxt[[3]]$content<-entxt[[3]]$content[t==1]
+
+entxt<-tm_map(entxt, content_transformer(function(x) iconv(enc2utf8(x), sub = "byte")))
+## Extra whitespace is eliminated by:
+entxt <- tm_map(entxt, stripWhitespace)
+## Remove punctuation marks from a text document.
+entxt <- tm_map(entxt, removePunctuation)
+## Remove numbers
+entxt <- tm_map(entxt, removeNumbers) 
+## Transform capital letters
+entxt <- tm_map(entxt, content_transformer(tolower))
+## removing URLs 
+removeURL <- function(x) gsub("http[[:alnum:]]*", "", x)
+entxt <- tm_map(entxt, content_transformer(removeURL))
+## In R we need to escape with a double backslash \\
+(f <- content_transformer(function(x, pattern) gsub(pattern, "", x)))
+entxt <- tm_map(entxt, f, "\\\\")
+# Profanity filtering - removing profanity and other words that will not be predicted.
+## Adapted the profanity words from Words list from Luis von Ahn's research group at CMU "http://www.cs.cmu.edu/~biglou/resources/bad-words.txt"
+profanity_words<- read.csv("C:/Users/ocham/Documents/Data/final/en_US1/profanity_words.txt", head=FALSE)
+# remove profanity words
+entxt <- tm_map(entxt, removeWords, profanity_words$V1)
+
+# Retirar stop words mas colocando em outro arquivo
+# entxt <- tm_map(entxt, removeWords, stopwords("english")) 
+
+ # Remove Own Stop Words (Não retirar ainda para entender os textos)
+#entxt<-tm_map(entxt,removeWords, c("now","can", "get", "like", "will", "just", "new", "â", "s", "t", "rt","[a-zA-Z]"))
+
+#entxt<-tm_map(entxt, stemDocument) # Removendo as terminações
+#saveRDS(entxt, "entxt_s_0.4")
+
+ saveRDS(entxt, "entxt_0.7")
+
+
+entxt_td<-tidy(entxt)
+rm(entxt)
+saveRDS(entxt_td,"entxt_td_0.7")
+
+
+cap_unigrams <- entxt_td %>%
+  unnest_tokens(unigram, text)  %>%  count(unigram, sort = TRUE)
+
+cap_unigrams$total <- sum(cap_unigrams$n)
+cap_unigrams$id<-"all"
+cap_unigrams
+
+cap_unigrams <- cap_unigrams %>% bind_tf_idf(unigram, id,n)
+
+cap_unigrams
+
+Gram_1_0.7<- cap_unigrams %>% count(unigram, sort = TRUE) %>% group_by(unigram) %>% data.frame()
+saveRDS(Gram_1_0.7, "Gram_1_0.7")
+rm(cap_unigrams)
+rm(Gram_1_0.7)
+
+## Bigrams
+
+cap_bigrams<- entxt_td %>% unnest_tokens(bigram, text, token ="ngrams", n=2) %>%  count(bigram, sort = TRUE)
+
+cap_bigrams$total <- sum(cap_bigrams$n)
+cap_bigrams$id<-"all"
+cap_bigrams
+
+cap_bigrams <- cap_bigrams %>% bind_tf_idf(bigram, id,n)
+
+cap_bigrams
+
+# Counting and Filtering N-grams
+
+bigrams_separated <- cap_bigrams %>%
+  separate(bigram, c("word1", "word"), sep = " ")
+
+Gram_2_0.7<- bigrams_separated %>% unite(input, word1, sep = " ") %>% data.frame()
+
+saveRDS(Gram_2_0.7, "Gram_2_0.7")
+rm(bigrams_separated)
+rm(cap_bigrams)
+rm(Gram_2_0.7)
+
+## Trigrams
+cap_trigrams<- entxt_td %>% unnest_tokens(trigram, text, token ="ngrams", n=3) %>%  count(trigram, sort = TRUE)
+
+cap_trigrams$total <- sum(cap_trigrams$n)
+cap_trigrams$id<-"all"
+cap_trigrams
+
+cap_trigrams <- cap_trigrams %>% bind_tf_idf(trigram, id,n)
+
+cap_trigrams
+
+# Counting and Filtering N-grams
+
+trigrams_separated <- cap_trigrams %>%
+  separate(trigram, c("word1", "word2", "word"), sep = " ")
+
+Gram_3_0.7<-trigrams_separated %>% unite(input, word1, word2, sep = " ") %>% data.frame()
+
+saveRDS(Gram_3_0.7, "Gram_3_0.7")
+rm(cap_trigrams)
+rm(Gram_3_0.7)
+rm(trigrams_separated)
+
+
+## Quadgrams
+
+cap_quagrams<- entxt_td %>% unnest_tokens(quagram, text, token ="ngrams", n=4) %>%  count(quagram, sort = TRUE)
+
+cap_quagrams$total <- sum(cap_quagrams$n)
+cap_quagrams$id<-"all"
+
+cap_quagrams
+
+cap_quagrams <- cap_quagrams %>% bind_tf_idf(quagram, id,n)
+
+cap_quagrams
+
+# Counting and Filtering N-grams
+
+quagrams_separated <- cap_quagrams %>%
+  separate(quagram, c("word1", "word2", "word3", "word"), sep = " ")
+
+
+Gram_4_0.4<-quagrams_separated %>% unite(input, word1, word2,word3, sep = " ") %>% data.frame()
+
+
+saveRDS(Gram_4_0.4, "Gram_4_0.4")
+rm(cap_quagrams)
+rm(Gram_4_0.4)
+rm(quagrams_separated)
+
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

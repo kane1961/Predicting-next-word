@@ -1,0 +1,33 @@
+---
+title: "App Predicting Next Word"
+author: "Oscar Chamberlain"
+date: "22 de novembro de 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Preface
+
+This is the last challenge to complete my Data Science specialization!
+To get to this point, I needed to learn a completely new subject, Natural Language Processing, and it took me more than four months of studying and testing. I came back several times to test the solutions through quizzes.
+Finally we have an App that is simple but running. I would like to thank my wife for all the Saturday nights that only ended with Sunday's sunrise.
+
+## Data Manipulation
+
+- Detail: link <https://support.rstudio.com/hc/en-us/articles/200486468>.
+- Data Base: We considered a random sample of 70% of Corpus from Twitter, News and Blogs. We used the tm package to treat the corpus for removing all numbers, punctuation, special characters, transform to lowercase and profanity words.
+- n-grams: We applied the tidyr and stringr package to define Gram-2, -3 and -4.
+- model definition: Simple Backoff Algorithm was applied and the model was chossen considering the time use and precision from 10 sentences chossen from the quizzes.
+- The table below present the summary:
+
+```{r}
+
+wordModel<-data.frame(time_user=c(196,2.9,1.17), system_user=c(1.55,0.07,0.03), Gram2_n=c(0,10,20), Gram3_n=c(0,4,8), Gram4_n=c(0,4,8), quiz_answered=c(11,9,9))
+rownames(wordModel)<-c("model 1", "model 2", "model 3")
+wordModel
+```
+
+
